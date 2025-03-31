@@ -38,19 +38,19 @@ AGridManager::AGridManager()
         }
     }
 
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> HighlightMeshAsset(TEXT("StaticMesh'/Game/StarterContent/Shapes/Shape_Plane.Shape_Plane'"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> HighlightMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Plane.Plane'"));
     if (HighlightMeshAsset.Succeeded())
     {
         HighlightMeshInstances->SetStaticMesh(HighlightMeshAsset.Object);
     }
 
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> FloorMeshAsset(TEXT("StaticMesh'/Game/StarterContent/Shapes/Shape_Plane.Shape_Plane'"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> FloorMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Plane.Plane'"));
     if (FloorMeshAsset.Succeeded())
     {
         FloorMeshInstances->SetStaticMesh(FloorMeshAsset.Object);
     }
 
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> ObstacleMeshAsset(TEXT("StaticMesh'/Game/StarterContent/Shapes/Shape_Plane.Shape_Plane'"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> ObstacleMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Plane.Plane'"));
     if (ObstacleMeshAsset.Succeeded())
     {
         ObstacleMeshInstances1->SetStaticMesh(ObstacleMeshAsset.Object);
@@ -87,7 +87,7 @@ AGridManager::AGridManager()
     BackgroundMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BackgroundMesh"));
     BackgroundMesh->SetupAttachment(RootComponent);
 
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> BackgroundMeshAsset(TEXT("StaticMesh'/Game/StarterContent/Shapes/Shape_Plane.Shape_Plane'"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> BackgroundMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Plane.Plane'"));
     if (BackgroundMeshAsset.Succeeded())
     {
         BackgroundMesh->SetStaticMesh(BackgroundMeshAsset.Object);

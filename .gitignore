@@ -23,3 +23,6 @@ DerivedDataCache/
 # Build cooked / packaging
 /Build/
 *.pdf
+
+# Contenuto demo di Unreal non utilizzato dal progetto
+Content/StarterContent/

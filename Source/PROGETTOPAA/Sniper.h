@@ -4,7 +4,6 @@
 #include "BaseUnit.h"
 #include "Sniper.generated.h"
 
-
 UCLASS()
 class PROGETTOPAA_API ASniper : public ABaseUnit
 {

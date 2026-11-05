@@ -73,9 +73,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Unit")
     bool PerformAttack(ABaseUnit* Target, class AGridManager* GridManager);
 
-    UFUNCTION(BlueprintCallable, Category = "Unit")
-    bool MoveTo(int32 DestinationX, int32 DestinationY, class AGridManager* GridManager);
-
     virtual void NotifyActorOnClicked(FKey ButtonPressed) override;
 
     UFUNCTION(BlueprintCallable, Category = "Unit")
@@ -95,7 +92,7 @@ public:
 
     void StartSmoothMovement(const TArray<FIntPoint>& Path, AGridManager* GridManager);
 
-    void Tick(float DeltaTime);
+    virtual void Tick(float DeltaTime) override;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     int32 MaxHealth;

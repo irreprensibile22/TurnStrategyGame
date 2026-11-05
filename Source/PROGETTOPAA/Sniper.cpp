@@ -9,6 +9,7 @@ ASniper::ASniper()
     MinDamage = 4;
     MaxDamage = 8;
     Health = 20;
+    MaxHealth = 20;
 
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterial(TEXT("Material'/Game/texture/Soldier1_Bluee.Soldier1_Bluee'"));
     if (DefaultMaterial.Succeeded())

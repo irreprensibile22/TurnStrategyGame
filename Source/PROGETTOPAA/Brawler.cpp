@@ -9,6 +9,7 @@ ABrawler::ABrawler()
     MinDamage = 1;
     MaxDamage = 6;
     Health = 40;
+    MaxHealth = 40;
 
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> DefaultMaterial(TEXT("Material'/Game/texture/Soldier2_Bluee.Soldier2_Bluee'"));
     if (DefaultMaterial.Succeeded())

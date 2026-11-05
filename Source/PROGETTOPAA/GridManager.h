@@ -85,10 +85,6 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Background")
     UStaticMeshComponent* BackgroundMesh;
 
-
-
-
-
 protected:
     virtual void BeginPlay() override;
     void GenerateGrid();

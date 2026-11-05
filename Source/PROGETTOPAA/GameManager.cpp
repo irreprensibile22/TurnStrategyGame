@@ -11,8 +11,8 @@
 #include <Kismet/GameplayStatics.h>
 #include "UObject/ConstructorHelpers.h"
 #include "GameFramework/Actor.h"
+#include "TimerManager.h"
 #include "MyUI.h"
-
 
 AGameManager::AGameManager()
 {
@@ -75,8 +75,6 @@ void AGameManager::BeginPlay()
     }
 }
 
-
-
 void AGameManager::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -115,11 +113,6 @@ void AGameManager::Tick(float DeltaTime)
         }
     }
 }
-
-
-
-
-
 
 void AGameManager::HandleFloorClick()
 {
@@ -174,10 +167,6 @@ void AGameManager::HandleFloorClick()
     }
 }
 
-
-
-
-
 void AGameManager::SetupUnits()
 {
     UWorld* World = GetWorld();
@@ -186,31 +175,19 @@ void AGameManager::SetupUnits()
     ABaseUnit* PlayerSniper = World->SpawnActor<ABaseUnit>(ASniper::StaticClass(), FVector(-500.f, 0.f, 310.f), FRotator::ZeroRotator);
     ABaseUnit* PlayerBrawler = World->SpawnActor<ABaseUnit>(ABrawler::StaticClass(), FVector(-500.f, 100.f, 310.f), FRotator::ZeroRotator);
 
+    // Le statistiche (movimento, range, danno, vita) sono impostate nei costruttori
+    // di ASniper/ABrawler: qui si configura solo appartenenza, visibilita' e materiale.
     if (PlayerSniper)
     {
         PlayerSniper->bIsPlayerUnit = true;
         PlayerUnits.Add(PlayerSniper);
         PlayerSniper->SetActorHiddenInGame(true);
-
-         PlayerSniper->MaxMovement = 3;
-        PlayerSniper->AttackRange = 10;
-        PlayerSniper->Health = 20;
-        PlayerSniper->MinDamage = 4;
-        PlayerSniper->MaxDamage = 8;
-        PlayerSniper->MaxHealth = 20;
     }
     if (PlayerBrawler)
     {
         PlayerBrawler->bIsPlayerUnit = true;
         PlayerUnits.Add(PlayerBrawler);
         PlayerBrawler->SetActorHiddenInGame(true);
-
-        PlayerBrawler->MaxMovement = 6;
-        PlayerBrawler->AttackRange = 1;
-        PlayerBrawler->Health = 40;
-        PlayerBrawler->MinDamage = 1;
-        PlayerBrawler->MaxDamage = 6;
-        PlayerBrawler->MaxHealth = 40;
     }
 
     ABaseUnit* OpponentSniper = World->SpawnActor<ABaseUnit>(ASniper::StaticClass(), FVector(500.f, 0.f, 310.f), FRotator::ZeroRotator);
@@ -229,13 +206,6 @@ void AGameManager::SetupUnits()
         {
             OpponentSniper->SetOpponentMaterial(OpponentMaterialSniper);
         }
-
-        OpponentSniper->MaxMovement = 3;
-        OpponentSniper->AttackRange = 10;
-        OpponentSniper->Health = 20;
-        OpponentSniper->MinDamage = 4;
-        OpponentSniper->MaxDamage = 8;
-        OpponentSniper->MaxHealth = 20;
     }
     if (OpponentBrawler)
     {
@@ -247,23 +217,11 @@ void AGameManager::SetupUnits()
         {
             OpponentBrawler->SetOpponentMaterial(OpponentMaterialBrawler);
         }
-
-        OpponentBrawler->MaxMovement = 6;
-        OpponentBrawler->AttackRange = 1;
-        OpponentBrawler->Health = 40;
-        OpponentBrawler->MinDamage = 1;
-        OpponentBrawler->MaxDamage = 6;
-        OpponentBrawler->MaxHealth = 40;
     }
 
     PlayerUnitsPlaced = 0;
     OpponentUnitsPlaced = 0;
 }
-
-
-
-
-
 
 void AGameManager::PerformCoinToss()
 {
@@ -274,8 +232,10 @@ void AGameManager::PerformCoinToss()
     {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("Risultato lancio moneta: %s"), *TossResult));
     }
-}
 
+    // Mostra l'esito anche nel widget (storico mosse), oltre al messaggio a schermo.
+    LogAction(FString::Printf(TEXT("Lancio moneta: inizia %s"), *TossResult));
+}
 
 void AGameManager::StartPlacementPhase()
 {
@@ -288,8 +248,6 @@ void AGameManager::StartPlacementPhase()
         UI->UpdateTurnText(FString::Printf(TEXT("Turno: %s (Posizionamento)"), *TurnStr));
     }
 }
-
-
 
 bool AGameManager::PlaceUnit(ABaseUnit* Unit, int32 X, int32 Y, bool bIsPlayer)
 {
@@ -340,9 +298,6 @@ bool AGameManager::PlaceUnit(ABaseUnit* Unit, int32 X, int32 Y, bool bIsPlayer)
     return true;
 }
 
-
-
-
 void AGameManager::EndPlacementPhase()
 {
     CurrentPhase = EGamePhase::ETurn;
@@ -355,8 +310,6 @@ void AGameManager::EndPlacementPhase()
     StartTurnPhase();
 }
 
-
-
 void AGameManager::StartTurnPhase()
 {
     if (UI)
@@ -365,6 +318,12 @@ void AGameManager::StartTurnPhase()
         UI->UpdateTurnText(TurnText);
     }
 
+    // All'inizio del turno del giocatore rimuove l'evidenziazione (rossa) del range dell'AI
+    // mostrata durante il turno avversario, cosi' non resta a schermo nel turno del player.
+    if (bIsPlayerTurn && GridManager)
+    {
+        GridManager->ClearMovementRange();
+    }
 
     for (ABaseUnit* Unit : PlayerUnits)
     {
@@ -383,9 +342,6 @@ void AGameManager::StartTurnPhase()
         }
     }
 }
-
-
-
 
 void AGameManager::EndTurnPhase()
 {
@@ -412,7 +368,6 @@ void AGameManager::EndTurnPhase()
 
     CurrentPhase = EGamePhase::ETurn;
 }
-
 
 void AGameManager::NextTurn()
 {
@@ -466,12 +421,6 @@ void AGameManager::CheckGameOver()
     }
 }
 
-
-
-
-
-
-
 void AGameManager::LogAction(const FString& Action)
 {
     MoveHistory.Add(Action);
@@ -483,19 +432,17 @@ void AGameManager::LogAction(const FString& Action)
     }
 }
 
-
-
-
 bool AGameManager::ExecuteMove(ABaseUnit* Unit, int32 DestX, int32 DestY)
 {
-        Unit ? Unit->CurrentX : -1,
-        Unit ? Unit->CurrentY : -1,
-        DestX,
-        DestY;
-
     if (!Unit || !GridManager)
         return false;
 
+    // Un'unita' gia' in movimento (animazione in corso) non puo' ricevere un nuovo ordine:
+    // evita il doppio movimento prima che bHasMoved venga impostato a fine animazione.
+    if (Unit->bIsMoving)
+    {
+        return false;
+    }
     if (Unit->bHasMoved)
     {
         return false;
@@ -528,13 +475,6 @@ bool AGameManager::ExecuteMove(ABaseUnit* Unit, int32 DestX, int32 DestY)
     return true;
 }
 
-
-
-
-
-
-
-
 bool AGameManager::ExecuteAttack(ABaseUnit* Attacker, ABaseUnit* Target)
 {
     if (!Attacker || !Target || !GridManager)
@@ -559,8 +499,6 @@ bool AGameManager::ExecuteAttack(ABaseUnit* Attacker, ABaseUnit* Target)
     return bAttacked;
 }
 
-
-
 void AGameManager::SetTopDownView()
 {
     FVector Center = FVector(0.f, 0.f, 300.f);
@@ -580,7 +518,6 @@ void AGameManager::SetTopDownView()
         }
     }
 }
-
 
 void AGameManager::OnUnitClicked(ABaseUnit* ClickedUnit)
 {
@@ -630,7 +567,6 @@ void AGameManager::OnUnitClicked(ABaseUnit* ClickedUnit)
     }
 }
 
-
 void AGameManager::AutoPlaceOpponentUnit()
 {
     if (!GridManager || OpponentUnitsPlaced >= UnitsToPlacePerSide)
@@ -676,14 +612,15 @@ void AGameManager::AutoPlaceOpponentUnit()
     }
 }
 
-
-
-
 void AGameManager::HandleFloorClickDuringTurn()
 {
     if (!SelectedUnit || !GridManager)
         return;
 
+    if (SelectedUnit->bIsMoving)
+    {
+        return;
+    }
     if (SelectedUnit->bHasMoved)
     {
         return;
@@ -759,10 +696,6 @@ void AGameManager::HandleFloorClickDuringTurn()
     }
 }
 
-
-
-
-
 void AGameManager::CheckIfActionsFinished()
 {
     bool bAllUnitsDone = true;
@@ -802,18 +735,24 @@ void AGameManager::CheckIfActionsFinished()
     }
 }
 
-
-
-
-
-
-
-
 void AGameManager::HandleHoverCell()
 {
+    // L'hover agisce solo quando e' il turno del giocatore (posizionamento o gioco): cosi'
+    // non disturba l'evidenziazione del range dell'AI mostrata nella pausa del turno avversario.
+    if (!bIsPlayerTurn || CurrentPhase == EGamePhase::EEnd)
+        return;
+
     APlayerController* PC = GetWorld()->GetFirstPlayerController();
     if (!PC || !GridManager)
         return;
+
+    // Quando un'unita' e' selezionata resta mostrato il suo range di movimento (blu):
+    // l'hover non deve sovrascriverlo, altrimenti l'evidenziazione del range sparirebbe.
+    if (SelectedUnit)
+    {
+        LastHoveredCell = FIntPoint(-1, -1);
+        return;
+    }
 
     FVector WorldLocation, WorldDirection;
     if (PC->DeprojectMousePositionToWorld(WorldLocation, WorldDirection))
@@ -826,10 +765,7 @@ void AGameManager::HandleHoverCell()
             if (Hit.GetActor() && Hit.GetActor()->IsA(ABaseUnit::StaticClass()))
             {
                 LastHoveredCell = FIntPoint(-1, -1);
-                if (!SelectedUnit)
-                {
-                    GridManager->ClearMovementRange();
-                }
+                GridManager->ClearMovementRange();
                 return;
             }
 
@@ -842,22 +778,6 @@ void AGameManager::HandleHoverCell()
                 int32 CellY = FMath::RoundToInt((HitLocation.Y + GridOffset.Y) / GridManager->CellSize);
 
                 FIntPoint HoveredCell(CellX, CellY);
-
-                if (SelectedUnit)
-                {
-                    int32 ManhattanDistance = FMath::Abs(SelectedUnit->CurrentX - CellX) +
-                        FMath::Abs(SelectedUnit->CurrentY - CellY);
-                    if (ManhattanDistance <= SelectedUnit->MaxMovement)
-                    {
-                        if (HoveredCell != LastHoveredCell)
-                        {
-                            LastHoveredCell = HoveredCell;
-                            GridManager->SetHighlightColor(FLinearColor::Yellow);
-                            GridManager->HighlightCell(CellX, CellY);
-                        }
-                        return;
-                    }
-                }
                 if (HoveredCell != LastHoveredCell)
                 {
                     LastHoveredCell = HoveredCell;
@@ -868,24 +788,11 @@ void AGameManager::HandleHoverCell()
             else
             {
                 LastHoveredCell = FIntPoint(-1, -1);
-                if (!SelectedUnit)
-                {
-                    GridManager->ClearMovementRange();
-                }
+                GridManager->ClearMovementRange();
             }
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
 
 void AGameManager::HighlightEnemiesInRange(ABaseUnit* UnitSelezionata)
 {
@@ -925,12 +832,30 @@ void AGameManager::HighlightEnemiesInRange(ABaseUnit* UnitSelezionata)
     }
 }
 
-
-
-
-
 void AGameManager::PerformAiTurn()
 {
+    // Requisito: durante il turno dell'AI si evidenzia sulla griglia il range di
+    // movimento delle sue unita' (automaticamente, senza selezione da parte del player).
+    // Si mostra il range con le pedine ancora ferme; dopo una breve pausa il range viene
+    // rimosso e le unita' eseguono le loro mosse (vedi ExecuteAiActions).
+    if (GridManager)
+    {
+        GridManager->HighlightOpponentMovementRange(OpponentUnits, FLinearColor::Red);
+    }
+
+    const float HighlightDelay = 0.9f;
+    GetWorldTimerManager().SetTimer(
+        AiHighlightTimerHandle, this, &AGameManager::ExecuteAiActions, HighlightDelay, false);
+}
+
+void AGameManager::ExecuteAiActions()
+{
+    // Rimuove l'evidenziazione del range prima di muovere le unita'.
+    if (GridManager)
+    {
+        GridManager->ClearMovementRange();
+    }
+
     for (ABaseUnit* OppUnit : OpponentUnits)
     {
         if (!OppUnit || !OppUnit->IsAlive() || OppUnit->bHasMoved)
@@ -1025,55 +950,6 @@ void AGameManager::PerformAiTurn()
     CheckIfActionsFinished();
 }
 
-
-
-
-
-
-
-ABaseUnit* AGameManager::FindNearestPlayerUnit(ABaseUnit* EnemyUnit)
-{
-    if (!EnemyUnit || !GridManager)
-        return nullptr;
-
-    ABaseUnit* NearestUnit = nullptr;
-    int32 MinDistance = INT32_MAX;
-
-    for (ABaseUnit* PlayerUnit : PlayerUnits)
-    {
-        if (!PlayerUnit || !PlayerUnit->IsAlive())
-            continue;
-
-        FIntPoint TargetCell = GridManager->GetNearestWalkableAdjacentCell(PlayerUnit->CurrentX, PlayerUnit->CurrentY);
-        if (TargetCell.X == -1)
-            continue;
-
-        TArray<FIntPoint> Path = GridManager->FindPathAStar(
-            EnemyUnit->CurrentX,
-            EnemyUnit->CurrentY,
-            TargetCell.X,
-            TargetCell.Y
-        );
-
-        if (Path.Num() > 0)
-        {
-            int32 Distance = Path.Num() - 1;
-            if (Distance < MinDistance)
-            {
-                MinDistance = Distance;
-                NearestUnit = PlayerUnit;
-            }
-        }
-    }
-
-    return NearestUnit;
-}
-
-
-
-
-
-
 void AGameManager::UpdateHealthUI()
 {
     if (UI)
@@ -1096,6 +972,4 @@ void AGameManager::UpdateHealthUI()
         }
     }
 }
-
-
 

@@ -27,8 +27,6 @@ private:
 
     FIntPoint LastHoveredCell = FIntPoint(-1, -1);
 
-
-
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -48,7 +46,6 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game")
     bool bPlayerWinsCoinToss;
 
-
     int32 UnitsToPlacePerSide;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game")
@@ -65,7 +62,6 @@ protected:
     void EndTurnPhase();
     void LogAction(const FString& Action);
     void AutoPlaceOpponentUnit();
-
 
 public:
 
@@ -102,8 +98,11 @@ public:
 
     void PerformAiTurn();
 
-    class ABaseUnit* FindNearestPlayerUnit(class ABaseUnit* EnemyUnit);
+    // Esegue effettivamente mosse e attacchi dell'AI, dopo la breve pausa di evidenziazione.
+    void ExecuteAiActions();
 
+    // Timer che tiene il range dell'AI evidenziato (pedine ferme) prima di muoverle.
+    FTimerHandle AiHighlightTimerHandle;
 
     UPROPERTY()
     UMyUI* UI;
@@ -114,6 +113,5 @@ public:
     void UpdateHealthUI();
 
     bool bAiTurnPending;
-
 
 };

@@ -24,8 +24,6 @@ ABaseUnit::ABaseUnit()
     VisualMesh->SetCollisionResponseToAllChannels(ECR_Block);
     VisualMesh->SetGenerateOverlapEvents(true);
 
-
-
     MaxMovement = 0;
     AttackRange = 0;
     MinDamage = 0;
@@ -41,9 +39,6 @@ ABaseUnit::ABaseUnit()
     bIsMoving = false;
     CurrentWaypointIndex = 0;
     LastAttackDamage = 0;
-
-
-
 
 }
 
@@ -63,6 +58,15 @@ void ABaseUnit::ApplyDamageAmount(int32 DamageAmount)
     if (Health <= 0)
     {
         Health = 0;
+
+        // Libera la cella occupata dall'unita' eliminata. Unico punto di liberazione:
+        // copre sia il bersaglio sia l'attaccante che muore per il danno da contrattacco.
+        AGridManager* Grid = Cast<AGridManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AGridManager::StaticClass()));
+        if (Grid)
+        {
+            Grid->SetCellOccupied(CurrentX, CurrentY, false);
+        }
+
         SetActorHiddenInGame(true);
         SetActorEnableCollision(false);
 
@@ -100,6 +104,9 @@ bool ABaseUnit::PerformAttack(ABaseUnit* Target, AGridManager* GridManager)
     }
     else
     {
+        // Corto raggio: la specifica richiede il calcolo "come il movimento". Con AttackRange = 1
+        // (l'unico valore melee del gioco) la distanza di Manhattan coincide col percorso minimo,
+        // perche' il bersaglio deve trovarsi su una cella adiacente ortogonale.
         int32 ManhattanDistance = FMath::Abs(CurrentX - Target->CurrentX) + FMath::Abs(CurrentY - Target->CurrentY);
         bInRange = (ManhattanDistance <= AttackRange);
     }
@@ -114,8 +121,6 @@ bool ABaseUnit::PerformAttack(ABaseUnit* Target, AGridManager* GridManager)
     const int32 DistToTarget = FMath::Abs(CurrentX - Target->CurrentX) + FMath::Abs(CurrentY - Target->CurrentY);
     const bool bTargetIsSniper = Target->IsA(ASniper::StaticClass());
     const bool bTargetIsBrawler = Target->IsA(ABrawler::StaticClass());
-    const int32 TargetX = Target->CurrentX;
-    const int32 TargetY = Target->CurrentY;
 
     int32 Damage = Attack();
     LastAttackDamage = Damage;
@@ -132,60 +137,11 @@ bool ABaseUnit::PerformAttack(ABaseUnit* Target, AGridManager* GridManager)
         }
     }
 
-    // Libera la cella solo se il bersaglio e' stato eliminato (IsValid copre il caso Destroy()).
-    if (!IsValid(Target) || !Target->IsAlive())
-    {
-        GridManager->SetCellOccupied(TargetX, TargetY, false);
-    }
-
+    // La liberazione della cella del bersaglio (ed eventualmente dell'attaccante, se muore
+    // per il contrattacco) e' gestita centralmente in ApplyDamageAmount.
     bHasAttacked = true;
     return true;
 }
-
-bool ABaseUnit::MoveTo(int32 DestinationX, int32 DestinationY, AGridManager* GridManager)
-{
-
-    if (bHasMoved)
-    {
-        return false;
-    }
-    if (!GridManager)
-    {
-        return false;
-    }
-
-    TArray<FIntPoint> Path = GridManager->FindPathBFS(CurrentX, CurrentY, DestinationX, DestinationY);
-
-    if (Path.Num() > 0 && (Path.Num() - 1) <= MaxMovement)
-    {
-        if (!GridManager->IsCellWalkable(DestinationX, DestinationY))
-        {
-            return false;
-        }
-
-        GridManager->SetCellOccupied(CurrentX, CurrentY, false);
-        GridManager->SetCellOccupied(DestinationX, DestinationY, true);
-
-        CurrentX = DestinationX;
-        CurrentY = DestinationY;
-
-        FVector NewLocation = GridManager->GetCellWorldLocation(DestinationX, DestinationY);
-        NewLocation.Z += 1.f;
-        SetActorLocation(NewLocation);
-
-        bHasMoved = true;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-
-
-
-
 
 void ABaseUnit::NotifyActorOnClicked(FKey ButtonPressed)
 {
@@ -197,10 +153,6 @@ void ABaseUnit::NotifyActorOnClicked(FKey ButtonPressed)
     }
 }
 
-
-
-
-
 void ABaseUnit::SetOpponentMaterial(UMaterialInterface* NewMaterial)
 {
     if (VisualMesh && NewMaterial)
@@ -208,9 +160,6 @@ void ABaseUnit::SetOpponentMaterial(UMaterialInterface* NewMaterial)
         VisualMesh->SetMaterial(0, NewMaterial);
     }
 }
-
-
-
 
 void ABaseUnit::Tick(float DeltaTime)
 {
@@ -243,10 +192,6 @@ void ABaseUnit::Tick(float DeltaTime)
         }
     }
 }
-
-
-
-
 
 void ABaseUnit::StartSmoothMovement(const TArray<FIntPoint>& Path, AGridManager* GridManager)
 {

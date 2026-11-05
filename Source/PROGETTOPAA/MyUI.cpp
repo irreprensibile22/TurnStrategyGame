@@ -7,8 +7,6 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameManager.h"
 
-
-
 void UMyUI::UpdateTurnText(const FString& NewTurnText)
 {
     if (TurnTextBlock)
@@ -17,8 +15,6 @@ void UMyUI::UpdateTurnText(const FString& NewTurnText)
     }
     
 }
-
-
 
 void UMyUI::NativeConstruct()
 {
@@ -41,44 +37,18 @@ void UMyUI::OnEndTurnButtonClicked()
 {
     if (GameManagerRef)
     {
-
-
+        // Il pulsante ha effetto solo durante il turno del giocatore: durante il turno
+        // dell'AI il click viene ignorato per non ri-attivare la logica dell'avversario.
         if (GameManagerRef->bIsPlayerTurn)
         {
             GameManagerRef->NextTurn();
             GameManagerRef->bAiTurnPending = true;
         }
-        else
-        {
-
-            GameManagerRef->bAiTurnPending = true;
-            UpdateTurnText(TEXT("Turno: Opponent"));
-        }
     }
 }
-
-
-
-
-
-void UMyUI::UpdateEndTurnButtonText(const FString& NewText)
-{
-    if (EndTurnButtonTextBlock)
-    {
-        EndTurnButtonTextBlock->SetText(FText::FromString("Termina Turno"));
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("EndTurnButtonTextBlock è nullo!"));
-    }
-}
-
-
 
 void UMyUI::UpdateUnitHealth(int32 UnitIndex, int32 CurrentHealth, int32 MaxHealth)
 {
-
-
     FString UnitName;
     switch (UnitIndex)
     {
@@ -125,9 +95,6 @@ void UMyUI::UpdateUnitHealth(int32 UnitIndex, int32 CurrentHealth, int32 MaxHeal
     }
 }
 
-
-
-
 void UMyUI::AddMoveEntry(const FString& MoveText)
 {
     if (MovesScrollBox)
@@ -137,7 +104,6 @@ void UMyUI::AddMoveEntry(const FString& MoveText)
         {
             NewEntry->SetText(FText::FromString(MoveText));
             MovesScrollBox->AddChild(NewEntry);
-
 
             int32 ChildCount = MovesScrollBox->GetChildrenCount();
             if (ChildCount > 0)
@@ -151,11 +117,6 @@ void UMyUI::AddMoveEntry(const FString& MoveText)
    
 }
 
-
-
-
-
-
 void UMyUI::ShowEndGameScreen(const FString& EndMessage)
 {
     if (EndGameTextBlock)
@@ -168,9 +129,6 @@ void UMyUI::ShowEndGameScreen(const FString& EndMessage)
         EndGamePanel->SetVisibility(ESlateVisibility::Visible);
     }
 }
-
-
-
 
 void UMyUI::OnQuitButtonClicked()
 {

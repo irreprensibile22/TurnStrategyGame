@@ -4,6 +4,20 @@
 #include "Engine/World.h"
 #include "UObject/ConstructorHelpers.h"
 
+namespace
+{
+    // Altezza (Z, in unita' world) a cui viene disegnato il piano della griglia.
+    constexpr float GridCellZ = 300.f;
+
+    // Spazio visivo tra celle adiacenti, per distinguerle graficamente.
+    constexpr float CellVisualGap = 5.f;
+
+    // Le 4 direzioni cardinali (niente diagonali), condivise da BFS, A* e flood-fill.
+    const FIntPoint GCardinalDirections[4] = {
+        FIntPoint(1, 0), FIntPoint(-1, 0), FIntPoint(0, 1), FIntPoint(0, -1)
+    };
+}
+
 AGridManager::AGridManager()
 {
     PrimaryActorTick.bCanEverTick = false;
@@ -81,8 +95,6 @@ AGridManager::AGridManager()
     }
 
     HighlightMeshInstances->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-
 
     BackgroundMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BackgroundMesh"));
     BackgroundMesh->SetupAttachment(RootComponent);
@@ -166,14 +178,13 @@ void AGridManager::GenerateGrid()
 
     FVector GridOffset = FVector(GridSize * CellSize * 0.5f, GridSize * CellSize * 0.5f, 0.f);
 
-    float CellGap = 5.f; 
-    float ScaleFactor = (CellSize - CellGap) / CellSize; 
+    float ScaleFactor = (CellSize - CellVisualGap) / CellSize;
 
     for (int32 x = 0; x < GridSize; x++)
     {
         for (int32 y = 0; y < GridSize; y++)
         {
-            FVector CellLocation = FVector(x * CellSize, y * CellSize, 300.0f) - GridOffset;
+            FVector CellLocation = FVector(x * CellSize, y * CellSize, GridCellZ) - GridOffset;
             FTransform InstanceTransform;
             InstanceTransform.SetLocation(CellLocation);
 
@@ -202,7 +213,6 @@ void AGridManager::GenerateGrid()
         }
     }
 }
-
 
 FCellData AGridManager::GetCell(int32 X, int32 Y) const
 {
@@ -259,8 +269,7 @@ TArray<FIntPoint> AGridManager::FindPathBFS(int32 startX, int32 startY, int32 en
             bFoundPath = true;
             break;
         }
-        TArray<FIntPoint> Directions = { FIntPoint(1, 0), FIntPoint(-1, 0), FIntPoint(0, 1), FIntPoint(0, -1) };
-        for (const FIntPoint& Dir : Directions)
+        for (const FIntPoint& Dir : GCardinalDirections)
         {
             FIntPoint Neighbor(Current.X + Dir.X, Current.Y + Dir.Y);
             if (Neighbor.X >= 0 && Neighbor.X < GridSize && Neighbor.Y >= 0 && Neighbor.Y < GridSize)
@@ -287,11 +296,8 @@ TArray<FIntPoint> AGridManager::FindPathBFS(int32 startX, int32 startY, int32 en
     }
     Path.Insert(Start, 0);
 
-
     return Path;
 }
-
-
 
 TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 EndX, int32 EndY) const
 {
@@ -381,10 +387,7 @@ TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 
 
         ClosedSet.Add(CurrentNode.Position);
 
-        const TArray<FIntPoint> Directions = { FIntPoint(1,0), FIntPoint(-1,0),
-                                               FIntPoint(0,1), FIntPoint(0,-1) };
-
-        for (const FIntPoint& Dir : Directions)
+        for (const FIntPoint& Dir : GCardinalDirections)
         {
             FIntPoint Neighbor(CurrentNode.Position.X + Dir.X,
                 CurrentNode.Position.Y + Dir.Y);
@@ -451,10 +454,6 @@ TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 
     return Path;
 }
 
-
-
-
-
 FString AGridManager::GetCellIdentifier(int32 X, int32 Y) const
 {
     if (X < 0 || X >= GridSize || Y < 0 || Y >= GridSize)
@@ -507,8 +506,7 @@ bool AGridManager::IsMapConnected() const
     {
         FIntPoint Current;
         Queue.Dequeue(Current);
-        TArray<FIntPoint> Directions = { FIntPoint(1,0), FIntPoint(-1,0), FIntPoint(0,1), FIntPoint(0,-1) };
-        for (const FIntPoint& Dir : Directions)
+        for (const FIntPoint& Dir : GCardinalDirections)
         {
             FIntPoint Neighbor(Current.X + Dir.X, Current.Y + Dir.Y);
             if (Neighbor.X >= 0 && Neighbor.X < GridSize && Neighbor.Y >= 0 && Neighbor.Y < GridSize)
@@ -524,12 +522,10 @@ bool AGridManager::IsMapConnected() const
     return (Visited.Num() == TotalWalkable);
 }
 
-
-
 FVector AGridManager::GetCellWorldLocation(int32 X, int32 Y) const
 {
     FVector GridOffset = FVector(GridSize * CellSize * 0.5f, GridSize * CellSize * 0.5f, 0.f);
-    return FVector(X * CellSize, Y * CellSize, 300.f) - GridOffset;
+    return FVector(X * CellSize, Y * CellSize, GridCellZ) - GridOffset;
 }
 
 void AGridManager::HighlightCell(int32 X, int32 Y)
@@ -546,8 +542,6 @@ void AGridManager::HighlightCell(int32 X, int32 Y)
     }
 }
 
-
-
 void AGridManager::SetHighlightColor(const FLinearColor& NewColor)
 {
     if (HighlightMeshInstances)
@@ -560,13 +554,10 @@ void AGridManager::SetHighlightColor(const FLinearColor& NewColor)
     }
 }
 
-
-
 void AGridManager::HighlightMovementRange(int32 StartX, int32 StartY, int32 MovementRange, const FLinearColor& RangeColor)
 {
     if (!HighlightMeshInstances)
         return;
-
 
     UMaterialInstanceDynamic* DynMat = Cast<UMaterialInstanceDynamic>(HighlightMeshInstances->GetMaterial(0));
     if (DynMat)
@@ -576,8 +567,7 @@ void AGridManager::HighlightMovementRange(int32 StartX, int32 StartY, int32 Move
 
     HighlightMeshInstances->ClearInstances();
 
-    float CellGap = 5.f;
-    float ScaleFactor = (CellSize - CellGap) / CellSize;
+    float ScaleFactor = (CellSize - CellVisualGap) / CellSize;
 
     // Una sola BFS dalla cella di partenza: O(N) invece di una BFS per ogni cella (O(N^2)).
     TArray<TArray<int32>> Dist = GetDistanceMap(StartX, StartY);
@@ -602,12 +592,6 @@ void AGridManager::HighlightMovementRange(int32 StartX, int32 StartY, int32 Move
     }
 }
 
-
-
-
-
-
-
 void AGridManager::ClearMovementRange()
 {
     if (HighlightMeshInstances)
@@ -615,11 +599,6 @@ void AGridManager::ClearMovementRange()
         HighlightMeshInstances->ClearInstances();
     }
 }
-
-
-
-
-
 
 TArray<TArray<int32>> AGridManager::GetDistanceMap(int32 StartX, int32 StartY) const
 {
@@ -640,13 +619,11 @@ TArray<TArray<int32>> AGridManager::GetDistanceMap(int32 StartX, int32 StartY) c
     Dist[StartX][StartY] = 0;
     Queue.Enqueue(FIntPoint(StartX, StartY));
 
-    const TArray<FIntPoint> Directions = { FIntPoint(1,0), FIntPoint(-1,0), FIntPoint(0,1), FIntPoint(0,-1) };
-
     while (!Queue.IsEmpty())
     {
         FIntPoint Current;
         Queue.Dequeue(Current);
-        for (const FIntPoint& Dir : Directions)
+        for (const FIntPoint& Dir : GCardinalDirections)
         {
             FIntPoint Neighbor(Current.X + Dir.X, Current.Y + Dir.Y);
             if (Neighbor.X < 0 || Neighbor.X >= GridSize || Neighbor.Y < 0 || Neighbor.Y >= GridSize)
@@ -690,8 +667,7 @@ TArray<FIntPoint> AGridManager::GetReachableCells(int32 StartX, int32 StartY, in
 
 FIntPoint AGridManager::GetNearestWalkableAdjacentCell(int32 TargetX, int32 TargetY) const
 {
-    TArray<FIntPoint> Directions = { FIntPoint(1,0), FIntPoint(-1,0), FIntPoint(0,1), FIntPoint(0,-1) };
-    for (const FIntPoint& Dir : Directions)
+    for (const FIntPoint& Dir : GCardinalDirections)
     {
         int32 AdjX = TargetX + Dir.X;
         int32 AdjY = TargetY + Dir.Y;
@@ -702,12 +678,6 @@ FIntPoint AGridManager::GetNearestWalkableAdjacentCell(int32 TargetX, int32 Targ
     }
     return FIntPoint(-1, -1);
 }
-
-
-
-
-
-
 
 void AGridManager::HighlightOpponentMovementRange(const TArray<ABaseUnit*>& OpponentUnits, const FLinearColor& RangeColor)
 {
@@ -722,8 +692,7 @@ void AGridManager::HighlightOpponentMovementRange(const TArray<ABaseUnit*>& Oppo
 
     HighlightMeshInstances->ClearInstances();
 
-    float CellGap = 5.f;
-    float ScaleFactor = (CellSize - CellGap) / CellSize;
+    float ScaleFactor = (CellSize - CellVisualGap) / CellSize;
 
     TSet<FIntPoint> CellsToHighlight;
 

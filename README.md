@@ -30,6 +30,8 @@ fino all'eliminazione delle unità avversarie.
 - Range di movimento evidenziato al click sull'unità (nascosto al secondo click).
 - Meccanismo del danno da contrattacco.
 - AI con azioni random e pathfinding ottimizzato **A\*** (min-heap).
+- Durante il turno dell'AI il range di movimento viene mostrato a unità ferme e, dopo una breve pausa, le pedine eseguono le mosse.
+- Esito del lancio della moneta riportato anche nello storico delle mosse.
 
 ## Struttura del codice
 

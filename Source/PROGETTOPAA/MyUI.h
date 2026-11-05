@@ -31,7 +31,6 @@ public:
     UFUNCTION()
     void OnQuitButtonClicked();
 
-
 protected:
     virtual void NativeConstruct() override;
 
@@ -40,9 +39,6 @@ protected:
 
     UPROPERTY(EditAnywhere, meta = (BindWidget))
     UButton* EndTurnButton;
-
-    UPROPERTY(EditAnywhere, meta = (BindWidget))
-    UTextBlock* EndTurnButtonTextBlock;
 
     UPROPERTY(meta = (BindWidget))
     UTextBlock* HealthStatusPedina1;
@@ -70,11 +66,6 @@ protected:
 
     UFUNCTION()
     void OnEndTurnButtonClicked();
-
-    UFUNCTION(BlueprintCallable, Category = "UI")
-    void UpdateEndTurnButtonText(const FString& NewText);
-
-
 
 private:
     

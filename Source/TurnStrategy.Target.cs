@@ -3,13 +3,13 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class PROGETTOPAATarget : TargetRules
+public class TurnStrategyTarget : TargetRules
 {
-	public PROGETTOPAATarget(TargetInfo Target) : base(Target)
+	public TurnStrategyTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_4;
-		ExtraModuleNames.Add("PROGETTOPAA");
+		ExtraModuleNames.Add("TurnStrategy");
 	}
 }

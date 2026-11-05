@@ -12,7 +12,7 @@ enum class EAttackType : uint8
 };
 
 UCLASS(Abstract)
-class PROGETTOPAA_API ABaseUnit : public AActor
+class TURNSTRATEGY_API ABaseUnit : public AActor
 {
     GENERATED_BODY()
 

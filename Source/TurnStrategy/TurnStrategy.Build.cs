@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class PROGETTOPAA : ModuleRules
+public class TurnStrategy : ModuleRules
 {
-	public PROGETTOPAA(ReadOnlyTargetRules Target) : base(Target)
+	public TurnStrategy(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	

@@ -108,6 +108,9 @@ void UMyUI::AddMoveEntry(const FString& MoveText)
         if (NewEntry)
         {
             NewEntry->SetText(FText::FromString(MoveText));
+            // Manda a capo il testo dentro la larghezza dello ScrollBox invece di
+            // allargarsi orizzontalmente e sforare sopra la griglia.
+            NewEntry->SetAutoWrapText(true);
             MovesScrollBox->AddChild(NewEntry);
 
             int32 ChildCount = MovesScrollBox->GetChildrenCount();

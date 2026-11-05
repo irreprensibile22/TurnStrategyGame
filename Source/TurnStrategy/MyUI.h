@@ -10,7 +10,7 @@ class UScrollBox;
 class AGameManager;
 
 UCLASS()
-class PROGETTOPAA_API UMyUI : public UUserWidget
+class TURNSTRATEGY_API UMyUI : public UUserWidget
 {
     GENERATED_BODY()
 

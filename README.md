@@ -1,4 +1,4 @@
-# PROGETTOPAA — Gioco Strategico a Turni
+# TurnStrategy — Gioco Strategico a Turni
 
 Un mio progetto personale: un gioco strategico a turni **1 vs 1 (Giocatore umano contro AI)**
 sviluppato in **Unreal Engine 5.4** e **C++**.
@@ -36,7 +36,7 @@ fino all'eliminazione delle unità avversarie.
 ## Struttura del codice
 
 ```
-Source/PROGETTOPAA/
+Source/TurnStrategy/
 ├── GameManager.{h,cpp}   # GameMode: fasi di gioco, turni, input, AI, camera top-down
 ├── GridManager.{h,cpp}   # Griglia, ostacoli, pathfinding (BFS, A*), evidenziazioni
 ├── BaseUnit.{h,cpp}      # Classe base astratta delle unità (attacco, danno, movimento)
@@ -58,7 +58,7 @@ Note tecniche:
 ## Come compilare ed eseguire
 
 1. Clonare il repository.
-2. Click destro su `PROGETTOPAA.uproject` → **Generate Visual Studio project files**.
+2. Click destro su `TurnStrategy.uproject` → **Generate Visual Studio project files**.
 3. Aprire la soluzione e compilare la configurazione **Development Editor | Win64**
    (oppure aprire direttamente il `.uproject`: l'editor proporrà di ricompilare i moduli).
 4. Avviare l'editor, aprire la mappa `Content/Livello_Ufficiale` e premere **Play**.

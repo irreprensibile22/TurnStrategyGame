@@ -2,13 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "BaseUnit.h"
-#include "Sniper.generated.h"
+#include "Brawler.generated.h"
 
 UCLASS()
-class PROGETTOPAA_API ASniper : public ABaseUnit
+class TURNSTRATEGY_API ABrawler : public ABaseUnit
 {
 	GENERATED_BODY()
 
 public:
-	ASniper();
+	ABrawler();
 };

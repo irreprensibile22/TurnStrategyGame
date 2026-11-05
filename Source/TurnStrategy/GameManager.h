@@ -14,7 +14,7 @@ enum class EGamePhase : uint8
 };
 
 UCLASS()
-class PROGETTOPAA_API AGameManager : public AGameModeBase
+class TURNSTRATEGY_API AGameManager : public AGameModeBase
 {
     GENERATED_BODY()
 

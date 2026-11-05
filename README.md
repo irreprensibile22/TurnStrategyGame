@@ -1,7 +1,7 @@
 # PROGETTOPAA — Gioco Strategico a Turni
 
-Progetto finale per il corso **PAA (Programmazione ad Oggetti / Advanced)** — A.A. 2024/2025.
-Gioco strategico a turni **1 vs 1 (Giocatore umano contro AI)** sviluppato in **Unreal Engine 5.4** e **C++**.
+Un mio progetto personale: un gioco strategico a turni **1 vs 1 (Giocatore umano contro AI)**
+sviluppato in **Unreal Engine 5.4** e **C++**.
 
 ## Descrizione
 
@@ -21,18 +21,15 @@ fino all'eliminazione delle unità avversarie.
 - **Danno da contrattacco**: se lo Sniper attacca un altro Sniper, o un Brawler a distanza 1,
   subisce un danno di ritorno (1 – 3).
 
-## Requisiti implementati
+## Caratteristiche
 
-1. ✅ Compila correttamente, codice strutturato con polimorfismo ed ereditarietà (`ABaseUnit` → `ASniper`, `ABrawler`).
-2. ✅ Griglia iniziale corretta e interamente visibile (vista dall'alto).
-3. ✅ Posizionamento alternato delle unità dopo il lancio della moneta.
-4. ✅ AI con azioni random (scelta di bersaglio e movimento).
-5. ✅ Gioco a turni con condizione di vittoria/sconfitta.
-6. ✅ Interfaccia (UMG) con turno corrente e vita di ogni unità.
-7. ✅ Range di movimento evidenziato al click sull'unità (nascosto al secondo click).
-8. ✅ Meccanismo del danno da contrattacco.
-9. ✅ Storico delle mosse eseguite.
-10. ✅ AI con pathfinding ottimizzato **A\*** (min-heap).
+- Griglia di gioco con ostacoli generati proceduralmente (percentuale configurabile) e sempre connessa.
+- Posizionamento alternato delle unità dopo il lancio della moneta.
+- Gioco a turni con condizione di vittoria/sconfitta.
+- Interfaccia (UMG) con turno corrente, vita di ogni unità e storico delle mosse.
+- Range di movimento evidenziato al click sull'unità (nascosto al secondo click).
+- Meccanismo del danno da contrattacco.
+- AI con azioni random e pathfinding ottimizzato **A\*** (min-heap).
 
 ## Struttura del codice
 
@@ -70,8 +67,3 @@ Note tecniche:
 - **Click** su una propria unità → la seleziona e mostra il range di movimento; secondo click → nasconde.
 - **Click** su un nemico in range → attacca.
 - Pulsante **Termina Turno** → passa il turno all'AI.
-
-## Note
-
-Progetto individuale sviluppato con Unreal Engine 5.4 e C++; Blueprint usati solo dove
-strettamente necessario per l'interfaccia UMG.

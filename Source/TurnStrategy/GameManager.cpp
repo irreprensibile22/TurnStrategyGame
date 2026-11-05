@@ -13,6 +13,7 @@
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
 #include "MyUI.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 AGameManager::AGameManager()
 {
@@ -78,6 +79,16 @@ void AGameManager::BeginPlay()
 void AGameManager::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
+    // Esc chiude il gioco (utile in fullscreen dove manca la X della finestra).
+    {
+        APlayerController* PC = GetWorld()->GetFirstPlayerController();
+        if (PC && PC->WasInputKeyJustPressed(EKeys::Escape))
+        {
+            UKismetSystemLibrary::QuitGame(this, PC, EQuitPreference::Quit, false);
+            return;
+        }
+    }
 
     HandleHoverCell();
     if (CurrentPhase == EGamePhase::EPlacement)

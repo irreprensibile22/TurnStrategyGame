@@ -54,7 +54,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid")
     class UInstancedStaticMeshComponent* ObstacleMeshInstances3;
 
-    // Dimensione della cella in unità world (usata per posizionare le istanze)
+    // Dimensione della cella in unitï¿½ world (usata per posizionare le istanze)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
     float CellSize;
 
@@ -113,6 +113,13 @@ public:
     TArray<FIntPoint> FindPathAStar(int32 StartX, int32 StartY, int32 EndX, int32 EndY) const;
 
     FIntPoint GetNearestWalkableAdjacentCell(int32 TargetX, int32 TargetY) const;
+
+    // Celle raggiungibili (percorso minimo) a distanza 1..MaxRange dalla cella di partenza.
+    TArray<FIntPoint> GetReachableCells(int32 StartX, int32 StartY, int32 MaxRange) const;
+
+    // Mappa delle distanze (percorso minimo) da una cella a tutte le altre, con una sola BFS.
+    // Celle non raggiungibili valgono -1. La cella di partenza vale 0.
+    TArray<TArray<int32>> GetDistanceMap(int32 StartX, int32 StartY) const;
 
 private:
     bool IsMapConnected() const;

@@ -142,8 +142,9 @@ void AGameManager::HandleFloorClick()
                     GridManager->GridSize * GridManager->CellSize * 0.5f, 0.f);
                 float AdjustedX = HitLocation.X + GridOffset.X;
                 float AdjustedY = HitLocation.Y + GridOffset.Y;
-                int32 CellX = FMath::FloorToInt(AdjustedX / GridManager->CellSize);
-                int32 CellY = FMath::FloorToInt(AdjustedY / GridManager->CellSize);
+                // RoundToInt: le istanze sono centrate sulla cella, quindi si mappa al centro piu' vicino.
+                int32 CellX = FMath::RoundToInt(AdjustedX / GridManager->CellSize);
+                int32 CellY = FMath::RoundToInt(AdjustedY / GridManager->CellSize);
 
                  if (GridManager->IsCellWalkable(CellX, CellY))
                 {
@@ -157,7 +158,7 @@ void AGameManager::HandleFloorClick()
                     {
                         if (GEngine)
                         {
-                            GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, TEXT("Tutte le tue unità sono state posizionate."));
+                            GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, TEXT("Tutte le tue unitï¿½ sono state posizionate."));
                         }
                     }
                 }
@@ -539,15 +540,17 @@ bool AGameManager::ExecuteAttack(ABaseUnit* Attacker, ABaseUnit* Target)
     if (!Attacker || !Target || !GridManager)
         return false;
 
+    // Cella del bersaglio catturata prima dell'attacco: PerformAttack puo' distruggere il Target.
+    const FString TargetCell = GridManager->GetCellIdentifier(Target->CurrentX, Target->CurrentY);
+
     bool bAttacked = Attacker->PerformAttack(Target, GridManager);
     if (bAttacked)
     {
         FString Side = Attacker->bIsPlayerUnit ? "HP" : "AI";
         FString UnitId = Attacker->IsA(ASniper::StaticClass()) ? "S" : "B";
-        FString TargetCell = GridManager->GetCellIdentifier(Target->CurrentX, Target->CurrentY);
 
-        int32 Damage = Attacker->Attack();
-        LogAction(FString::Printf(TEXT("%s: %s %s attacked with damage %d"), *Side, *UnitId, *TargetCell, Damage));
+        int32 Damage = Attacker->LastAttackDamage;
+        LogAction(FString::Printf(TEXT("%s: %s %s %d"), *Side, *UnitId, *TargetCell, Damage));
 
         UpdateHealthUI();
 
@@ -583,6 +586,18 @@ void AGameManager::OnUnitClicked(ABaseUnit* ClickedUnit)
 {
     if (PlayerUnits.Contains(ClickedUnit))
     {
+        // Secondo click sulla stessa unita': deseleziona e nasconde il range (come da specifiche).
+        if (SelectedUnit == ClickedUnit)
+        {
+            SelectedUnit->SetSelected(false);
+            SelectedUnit = nullptr;
+            if (GridManager)
+            {
+                GridManager->ClearMovementRange();
+            }
+            return;
+        }
+
         if (SelectedUnit && SelectedUnit != ClickedUnit)
         {
             SelectedUnit->SetSelected(false);
@@ -701,8 +716,9 @@ void AGameManager::HandleFloorClickDuringTurn()
 
                 float AdjustedX = HitLocation.X + GridOffset.X;
                 float AdjustedY = HitLocation.Y + GridOffset.Y;
-                int32 CellX = FMath::FloorToInt(AdjustedX / GridManager->CellSize);
-                int32 CellY = FMath::FloorToInt(AdjustedY / GridManager->CellSize);
+                // RoundToInt: le istanze sono centrate sulla cella, quindi si mappa al centro piu' vicino.
+                int32 CellX = FMath::RoundToInt(AdjustedX / GridManager->CellSize);
+                int32 CellY = FMath::RoundToInt(AdjustedY / GridManager->CellSize);
 
                 TArray<FIntPoint> Path;
                 if (SelectedUnit->bIsPlayerUnit)
@@ -822,8 +838,8 @@ void AGameManager::HandleHoverCell()
                 FVector HitLocation = Hit.Location;
                 FVector GridOffset = FVector(GridManager->GridSize * GridManager->CellSize * 0.5f,
                     GridManager->GridSize * GridManager->CellSize * 0.5f, 0.f);
-                int32 CellX = FMath::FloorToInt((HitLocation.X + GridOffset.X) / GridManager->CellSize);
-                int32 CellY = FMath::FloorToInt((HitLocation.Y + GridOffset.Y) / GridManager->CellSize);
+                int32 CellX = FMath::RoundToInt((HitLocation.X + GridOffset.X) / GridManager->CellSize);
+                int32 CellY = FMath::RoundToInt((HitLocation.Y + GridOffset.Y) / GridManager->CellSize);
 
                 FIntPoint HoveredCell(CellX, CellY);
 
@@ -915,62 +931,98 @@ void AGameManager::HighlightEnemiesInRange(ABaseUnit* UnitSelezionata)
 
 void AGameManager::PerformAiTurn()
 {
-
     for (ABaseUnit* OppUnit : OpponentUnits)
     {
-        if (!OppUnit)
+        if (!OppUnit || !OppUnit->IsAlive() || OppUnit->bHasMoved)
         {
             continue;
         }
-        if (!OppUnit->IsAlive())
+
+        // Elenco delle unita' del player ancora vive.
+        TArray<ABaseUnit*> AliveTargets;
+        for (ABaseUnit* P : PlayerUnits)
+        {
+            if (P && P->IsAlive())
+            {
+                AliveTargets.Add(P);
+            }
+        }
+        if (AliveTargets.Num() == 0)
         {
             continue;
         }
-        if (!OppUnit->bHasMoved)
+
+        // Scelta del bersaglio in modo RANDOM (requisito: AI con azioni random).
+        ABaseUnit* Target = AliveTargets[FMath::RandRange(0, AliveTargets.Num() - 1)];
+
+        // Movimento: con probabilita' 50% l'IA si avvicina al nemico usando A*
+        // (requisito: algoritmo ottimizzato), altrimenti si muove verso una cella
+        // raggiungibile scelta a caso (requisito: movimento random).
+        const bool bMoveTowardsEnemy = FMath::RandBool();
+
+        if (bMoveTowardsEnemy)
         {
-            ABaseUnit* NearestPlayerUnit = FindNearestPlayerUnit(OppUnit);
-            if (!NearestPlayerUnit)
+            FIntPoint AdjacentCell = GridManager->GetNearestWalkableAdjacentCell(Target->CurrentX, Target->CurrentY);
+            if (AdjacentCell.X != -1)
             {
-                continue;
-            }
-
-            FIntPoint AdjacentCell = GridManager->GetNearestWalkableAdjacentCell(
-                NearestPlayerUnit->CurrentX,
-                NearestPlayerUnit->CurrentY
-            );
-            if (AdjacentCell.X == -1)
-            {
-                continue;
-            }
-
-            TArray<FIntPoint> Path = GridManager->FindPathAStar(
-                OppUnit->CurrentX,
-                OppUnit->CurrentY,
-                AdjacentCell.X,
-                AdjacentCell.Y
-            );
-
-            if (Path.Num() > 1)
-            {
-                int32 MaxSteps = FMath::Min(OppUnit->MaxMovement, Path.Num() - 1);
-                FIntPoint FinalDestination = Path[MaxSteps];
-                bool bMoved = ExecuteMove(OppUnit, FinalDestination.X, FinalDestination.Y);
-                
-            }
-
-            if (!OppUnit->bHasAttacked && OppUnit->IsAlive() && NearestPlayerUnit->IsAlive())
-            {
-                int32 Dist = FMath::Abs(OppUnit->CurrentX - NearestPlayerUnit->CurrentX) +
-                    FMath::Abs(OppUnit->CurrentY - NearestPlayerUnit->CurrentY);
-
-                if (Dist <= OppUnit->AttackRange)
+                TArray<FIntPoint> Path = GridManager->FindPathAStar(
+                    OppUnit->CurrentX, OppUnit->CurrentY, AdjacentCell.X, AdjacentCell.Y);
+                if (Path.Num() > 1)
                 {
-
-                    ExecuteAttack(OppUnit, NearestPlayerUnit);
+                    int32 MaxSteps = FMath::Min(OppUnit->MaxMovement, Path.Num() - 1);
+                    FIntPoint Destination = Path[MaxSteps];
+                    ExecuteMove(OppUnit, Destination.X, Destination.Y);
                 }
             }
         }
+        else
+        {
+            TArray<FIntPoint> Reachable = GridManager->GetReachableCells(
+                OppUnit->CurrentX, OppUnit->CurrentY, OppUnit->MaxMovement);
+            if (Reachable.Num() > 0)
+            {
+                FIntPoint Destination = Reachable[FMath::RandRange(0, Reachable.Num() - 1)];
+                ExecuteMove(OppUnit, Destination.X, Destination.Y);
+            }
+        }
+
+        // Attacco: colpisce un nemico scelto a caso tra quelli nel range (azione random).
+        if (!OppUnit->bHasAttacked && OppUnit->IsAlive())
+        {
+            TArray<ABaseUnit*> InRange;
+            for (ABaseUnit* P : PlayerUnits)
+            {
+                if (!P || !P->IsAlive())
+                {
+                    continue;
+                }
+                int32 Dist = FMath::Abs(OppUnit->CurrentX - P->CurrentX) +
+                    FMath::Abs(OppUnit->CurrentY - P->CurrentY);
+                if (Dist <= OppUnit->AttackRange)
+                {
+                    InRange.Add(P);
+                }
+            }
+            if (InRange.Num() > 0)
+            {
+                ABaseUnit* AttackTarget = InRange[FMath::RandRange(0, InRange.Num() - 1)];
+                ExecuteAttack(OppUnit, AttackTarget);
+            }
+        }
     }
+
+    // Garanzia di terminazione del turno AI: ogni unita' viva che NON si sta muovendo
+    // ha concluso le proprie azioni (anche se non ha potuto muoversi o attaccare).
+    // Senza questo, un'unita' bloccata lasciava il turno appeso all'infinito.
+    for (ABaseUnit* OppUnit : OpponentUnits)
+    {
+        if (OppUnit && OppUnit->IsAlive() && !OppUnit->bIsMoving)
+        {
+            OppUnit->bHasMoved = true;
+            OppUnit->bHasAttacked = true;
+        }
+    }
+    CheckIfActionsFinished();
 }
 
 

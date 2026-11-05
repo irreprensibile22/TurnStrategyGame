@@ -22,6 +22,7 @@ public:
     AGameManager();
 
 private:
+    UPROPERTY()
     ABaseUnit* SelectedUnit;
 
     FIntPoint LastHoveredCell = FIntPoint(-1, -1);

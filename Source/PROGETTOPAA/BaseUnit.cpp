@@ -40,6 +40,7 @@ ABaseUnit::ABaseUnit()
     MovementSpeed = 200.f; 
     bIsMoving = false;
     CurrentWaypointIndex = 0;
+    LastAttackDamage = 0;
 
 
 
@@ -56,7 +57,7 @@ int32 ABaseUnit::Attack()
     return FMath::RandRange(MinDamage, MaxDamage);
 }
 
-void ABaseUnit::TakeDamage(int32 DamageAmount)
+void ABaseUnit::ApplyDamageAmount(int32 DamageAmount)
 {
     Health -= DamageAmount;
     if (Health <= 0)
@@ -108,22 +109,33 @@ bool ABaseUnit::PerformAttack(ABaseUnit* Target, AGridManager* GridManager)
         return false;
     }
 
-    int32 Damage = Attack();
-    Target->TakeDamage(Damage);
+    // Calcola tipo/distanza del bersaglio PRIMA di applicare il danno:
+    // ApplyDamageAmount puo' distruggere il Target, rendendone l'accesso successivo non sicuro.
+    const int32 DistToTarget = FMath::Abs(CurrentX - Target->CurrentX) + FMath::Abs(CurrentY - Target->CurrentY);
+    const bool bTargetIsSniper = Target->IsA(ASniper::StaticClass());
+    const bool bTargetIsBrawler = Target->IsA(ABrawler::StaticClass());
+    const int32 TargetX = Target->CurrentX;
+    const int32 TargetY = Target->CurrentY;
 
+    int32 Damage = Attack();
+    LastAttackDamage = Damage;
+    Target->ApplyDamageAmount(Damage);
+
+    // Danno da contrattacco: solo se l'attaccante e' lo Sniper (Ranged) e il bersaglio
+    // e' uno Sniper, oppure un Brawler a distanza 1.
     if (AttackType == EAttackType::Ranged)
     {
-        int32 DistToTarget = FMath::Abs(CurrentX - Target->CurrentX) + FMath::Abs(CurrentY - Target->CurrentY);
-        if (Target->IsA(ASniper::StaticClass()) || (Target->IsA(ABrawler::StaticClass()) && (DistToTarget == 1)))
+        if (bTargetIsSniper || (bTargetIsBrawler && (DistToTarget == 1)))
         {
             int32 CounterDamage = FMath::RandRange(1, 3);
-            TakeDamage(CounterDamage);
+            ApplyDamageAmount(CounterDamage);
         }
     }
 
-    if (!Target->IsAlive())
+    // Libera la cella solo se il bersaglio e' stato eliminato (IsValid copre il caso Destroy()).
+    if (!IsValid(Target) || !Target->IsAlive())
     {
-        GridManager->SetCellOccupied(Target->CurrentX, Target->CurrentY, false);
+        GridManager->SetCellOccupied(TargetX, TargetY, false);
     }
 
     bHasAttacked = true;

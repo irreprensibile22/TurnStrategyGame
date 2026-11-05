@@ -65,7 +65,7 @@ public:
     virtual int32 Attack();
 
     UFUNCTION(BlueprintCallable, Category = "Unit")
-    virtual void TakeDamage(int32 DamageAmount);
+    virtual void ApplyDamageAmount(int32 DamageAmount);
 
     UFUNCTION(BlueprintCallable, Category = "Unit")
     virtual bool IsAlive() const;
@@ -99,4 +99,8 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     int32 MaxHealth;
+
+    // Danno realmente inflitto nell'ultimo PerformAttack (usato per lo storico mosse).
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit")
+    int32 LastAttackDamage;
 };

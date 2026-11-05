@@ -305,13 +305,27 @@ TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 
     struct FAStarNode
     {
         FIntPoint Position;
-        int32 GCost;       
-        int32 HCost;       
-        FIntPoint Parent;  
+        int32 GCost;
+        int32 HCost;
 
         int32 GetFCost() const
         {
             return GCost + HCost;
+        }
+    };
+
+    // Predicato per il min-heap: ordina per F crescente, a parita' di F per H crescente.
+    struct FAStarNodeLess
+    {
+        bool operator()(const FAStarNode& A, const FAStarNode& B) const
+        {
+            const int32 FA = A.GetFCost();
+            const int32 FB = B.GetFCost();
+            if (FA != FB)
+            {
+                return FA < FB;
+            }
+            return A.HCost < B.HCost;
         }
     };
 
@@ -323,6 +337,9 @@ TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 
     FIntPoint Start(StartX, StartY);
     FIntPoint Goal(EndX, EndY);
 
+    // OpenList gestita come min-heap binario (HeapPush/HeapPop): estrazione del minimo in O(log V).
+    // Si usa la "lazy deletion": invece di aggiornare un nodo gia' in heap, se ne inserisce uno
+    // nuovo con costo migliore; i duplicati obsoleti vengono scartati al momento del pop.
     TArray<FAStarNode> OpenList;
     TSet<FIntPoint> ClosedSet;
 
@@ -333,9 +350,8 @@ TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 
     StartNode.Position = Start;
     StartNode.GCost = 0;
     StartNode.HCost = Heuristic(StartX, StartY, EndX, EndY);
-    StartNode.Parent = FIntPoint(-1, -1);
 
-    OpenList.Add(StartNode);
+    OpenList.HeapPush(StartNode, FAStarNodeLess());
     GCostMap.Add(Start, 0);
     ParentMap.Add(Start, FIntPoint(-1, -1));
 
@@ -343,23 +359,19 @@ TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 
 
     while (OpenList.Num() > 0)
     {
-        int32 BestIndex = 0;
-        int32 BestFCost = OpenList[0].GetFCost();
-        for (int32 i = 1; i < OpenList.Num(); i++)
-        {
-            int32 CurrentFCost = OpenList[i].GetFCost();
-            int32 BestHCost = OpenList[BestIndex].HCost;
-            int32 CurrentHCost = OpenList[i].HCost;
-            if ((CurrentFCost < BestFCost) ||
-                (CurrentFCost == BestFCost && CurrentHCost < BestHCost))
-            {
-                BestIndex = i;
-                BestFCost = CurrentFCost;
-            }
-        }
+        FAStarNode CurrentNode;
+        OpenList.HeapPop(CurrentNode, FAStarNodeLess());
 
-        FAStarNode CurrentNode = OpenList[BestIndex];
-        OpenList.RemoveAt(BestIndex);
+        // Nodo obsoleto (lazy deletion): gia' espanso, oppure superato da un costo migliore.
+        if (ClosedSet.Contains(CurrentNode.Position))
+        {
+            continue;
+        }
+        const int32* BestG = GCostMap.Find(CurrentNode.Position);
+        if (BestG && CurrentNode.GCost > *BestG)
+        {
+            continue;
+        }
 
         if (CurrentNode.Position == Goal)
         {
@@ -369,8 +381,8 @@ TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 
 
         ClosedSet.Add(CurrentNode.Position);
 
-        TArray<FIntPoint> Directions = { FIntPoint(1,0), FIntPoint(-1,0),
-                                         FIntPoint(0,1), FIntPoint(0,-1) };
+        const TArray<FIntPoint> Directions = { FIntPoint(1,0), FIntPoint(-1,0),
+                                               FIntPoint(0,1), FIntPoint(0,-1) };
 
         for (const FIntPoint& Dir : Directions)
         {
@@ -391,34 +403,20 @@ TArray<FIntPoint> AGridManager::FindPathAStar(int32 StartX, int32 StartY, int32 
                 continue;
             }
 
-            int32 TentativeGCost = CurrentNode.GCost + 1; 
+            int32 TentativeGCost = CurrentNode.GCost + 1;
 
-            if (!GCostMap.Contains(Neighbor) || TentativeGCost < GCostMap[Neighbor])
+            const int32* NeighborG = GCostMap.Find(Neighbor);
+            if (!NeighborG || TentativeGCost < *NeighborG)
             {
                 GCostMap.Add(Neighbor, TentativeGCost);
-
                 ParentMap.Add(Neighbor, CurrentNode.Position);
 
                 FAStarNode NeighborNode;
                 NeighborNode.Position = Neighbor;
                 NeighborNode.GCost = TentativeGCost;
                 NeighborNode.HCost = Heuristic(Neighbor.X, Neighbor.Y, EndX, EndY);
-                NeighborNode.Parent = CurrentNode.Position;
 
-                bool bAlreadyInOpen = false;
-                for (int32 j = 0; j < OpenList.Num(); j++)
-                {
-                    if (OpenList[j].Position == Neighbor)
-                    {
-                        OpenList[j] = NeighborNode; 
-                        bAlreadyInOpen = true;
-                        break;
-                    }
-                }
-                if (!bAlreadyInOpen)
-                {
-                    OpenList.Add(NeighborNode);
-                }
+                OpenList.HeapPush(NeighborNode, FAStarNodeLess());
             }
         }
     }
@@ -581,29 +579,24 @@ void AGridManager::HighlightMovementRange(int32 StartX, int32 StartY, int32 Move
     float CellGap = 5.f;
     float ScaleFactor = (CellSize - CellGap) / CellSize;
 
+    // Una sola BFS dalla cella di partenza: O(N) invece di una BFS per ogni cella (O(N^2)).
+    TArray<TArray<int32>> Dist = GetDistanceMap(StartX, StartY);
+
     for (int32 x = 0; x < GridSize; x++)
     {
         for (int32 y = 0; y < GridSize; y++)
         {
-            TArray<FIntPoint> Path = FindPathBFS(StartX, StartY, x, y);
-            if (Path.Num() > 0)
+            int32 Distance = Dist[x][y];
+            if (Distance >= 1 && Distance <= MovementRange)
             {
-                int32 Distance = Path.Num() - 1;
+                FVector CellLocation = GetCellWorldLocation(x, y);
+                CellLocation.Z += 5.f;
 
-                if (Distance == 0)
-                    continue;
+                FTransform Transform;
+                Transform.SetLocation(CellLocation);
+                Transform.SetScale3D(FVector(ScaleFactor, ScaleFactor, 1.0f));
 
-                if (Distance <= MovementRange)
-                {
-                    FVector CellLocation = GetCellWorldLocation(x, y);
-                    CellLocation.Z += 5.f; 
-
-                    FTransform Transform;
-                    Transform.SetLocation(CellLocation);
-                    Transform.SetScale3D(FVector(ScaleFactor, ScaleFactor, 1.0f));
-
-                    HighlightMeshInstances->AddInstance(Transform);
-                }
+                HighlightMeshInstances->AddInstance(Transform);
             }
         }
     }
@@ -627,6 +620,73 @@ void AGridManager::ClearMovementRange()
 
 
 
+
+TArray<TArray<int32>> AGridManager::GetDistanceMap(int32 StartX, int32 StartY) const
+{
+    // Distanza -1 = non raggiungibile. Una sola BFS (flood-fill) copre tutta la griglia: O(N).
+    TArray<TArray<int32>> Dist;
+    Dist.SetNum(GridSize);
+    for (int32 x = 0; x < GridSize; x++)
+    {
+        Dist[x].Init(-1, GridSize);
+    }
+
+    if (StartX < 0 || StartX >= GridSize || StartY < 0 || StartY >= GridSize)
+    {
+        return Dist;
+    }
+
+    TQueue<FIntPoint> Queue;
+    Dist[StartX][StartY] = 0;
+    Queue.Enqueue(FIntPoint(StartX, StartY));
+
+    const TArray<FIntPoint> Directions = { FIntPoint(1,0), FIntPoint(-1,0), FIntPoint(0,1), FIntPoint(0,-1) };
+
+    while (!Queue.IsEmpty())
+    {
+        FIntPoint Current;
+        Queue.Dequeue(Current);
+        for (const FIntPoint& Dir : Directions)
+        {
+            FIntPoint Neighbor(Current.X + Dir.X, Current.Y + Dir.Y);
+            if (Neighbor.X < 0 || Neighbor.X >= GridSize || Neighbor.Y < 0 || Neighbor.Y >= GridSize)
+            {
+                continue;
+            }
+            if (Dist[Neighbor.X][Neighbor.Y] != -1)
+            {
+                continue; // gia' visitata
+            }
+            if (!IsCellWalkable(Neighbor.X, Neighbor.Y))
+            {
+                continue; // ostacolo o cella occupata
+            }
+            Dist[Neighbor.X][Neighbor.Y] = Dist[Current.X][Current.Y] + 1;
+            Queue.Enqueue(Neighbor);
+        }
+    }
+
+    return Dist;
+}
+
+TArray<FIntPoint> AGridManager::GetReachableCells(int32 StartX, int32 StartY, int32 MaxRange) const
+{
+    TArray<FIntPoint> Reachable;
+    TArray<TArray<int32>> Dist = GetDistanceMap(StartX, StartY);
+
+    for (int32 x = 0; x < GridSize; x++)
+    {
+        for (int32 y = 0; y < GridSize; y++)
+        {
+            int32 D = Dist[x][y];
+            if (D >= 1 && D <= MaxRange)
+            {
+                Reachable.Add(FIntPoint(x, y));
+            }
+        }
+    }
+    return Reachable;
+}
 
 FIntPoint AGridManager::GetNearestWalkableAdjacentCell(int32 TargetX, int32 TargetY) const
 {
@@ -672,18 +732,16 @@ void AGridManager::HighlightOpponentMovementRange(const TArray<ABaseUnit*>& Oppo
         if (!Unit || !Unit->IsAlive() || Unit->bHasMoved)
             continue;
 
+        // Una sola BFS per unita' (O(N)) invece di una BFS per ogni cella (O(N^2)).
+        TArray<TArray<int32>> Dist = GetDistanceMap(Unit->CurrentX, Unit->CurrentY);
         for (int32 x = 0; x < GridSize; x++)
         {
             for (int32 y = 0; y < GridSize; y++)
             {
-                TArray<FIntPoint> Path = FindPathBFS(Unit->CurrentX, Unit->CurrentY, x, y);
-                if (Path.Num() > 0)
+                int32 Distance = Dist[x][y];
+                if (Distance >= 1 && Distance <= Unit->MaxMovement)
                 {
-                    int32 Distance = Path.Num() - 1;
-                    if (Distance > 0 && Distance <= Unit->MaxMovement)
-                    {
-                        CellsToHighlight.Add(FIntPoint(x, y));
-                    }
+                    CellsToHighlight.Add(FIntPoint(x, y));
                 }
             }
         }

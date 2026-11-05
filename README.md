@@ -69,3 +69,14 @@ Note tecniche:
 - **Click** su una propria unità → la seleziona e mostra il range di movimento; secondo click → nasconde.
 - **Click** su un nemico in range → attacca.
 - Pulsante **Termina Turno** → passa il turno all'AI.
+- **Esc** → esci dal gioco.
+
+## Creare l'eseguibile (packaging)
+
+1. (Opzionale) In `Edit → Project Settings → Platforms → Windows` imposta come **Game Icon**
+   il file `Build/Windows/Application.ico`.
+2. `Platforms → Windows → Build Configuration → Shipping` (o **Development** per i test).
+3. `Platforms → Windows → Package Project` e scegli la cartella di output.
+4. Risultato: `Windows/TurnStrategy.exe` (per distribuirlo copia **l'intera** cartella `Windows/`).
+
+Il gioco parte in finestra (con barra del titolo e X); in alternativa si chiude con **Esc** o **Alt+F4**.

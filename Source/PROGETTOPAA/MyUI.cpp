@@ -31,6 +31,11 @@ void UMyUI::NativeConstruct()
     {
         QuitButton->OnClicked.AddDynamic(this, &UMyUI::OnQuitButtonClicked);
     }
+
+    if (PlayAgainButton)
+    {
+        PlayAgainButton->OnClicked.AddDynamic(this, &UMyUI::OnPlayAgainButtonClicked);
+    }
 }
 
 void UMyUI::OnEndTurnButtonClicked()
@@ -41,8 +46,8 @@ void UMyUI::OnEndTurnButtonClicked()
         // dell'AI il click viene ignorato per non ri-attivare la logica dell'avversario.
         if (GameManagerRef->bIsPlayerTurn)
         {
+            // NextTurn passa il turno all'AI; l'avvio automatico e' gestito da StartTurnPhase.
             GameManagerRef->NextTurn();
-            GameManagerRef->bAiTurnPending = true;
         }
     }
 }
@@ -117,8 +122,29 @@ void UMyUI::AddMoveEntry(const FString& MoveText)
    
 }
 
+void UMyUI::SetEndTurnButtonEnabled(bool bEnabled)
+{
+    if (EndTurnButton)
+    {
+        EndTurnButton->SetIsEnabled(bEnabled);
+    }
+}
+
 void UMyUI::ShowEndGameScreen(const FString& EndMessage)
 {
+    // Nasconde l'HUD di gioco: resta visibile solo il pannello di fine partita.
+    UWidget* GameplayWidgets[] = {
+        TurnTextBlock, EndTurnButton, EndTurnButtonTextBlock, MovesScrollBox,
+        HealthStatusPedina1, HealthStatusPedina2, HealthStatusPedina3, HealthStatusPedina4
+    };
+    for (UWidget* Widget : GameplayWidgets)
+    {
+        if (Widget)
+        {
+            Widget->SetVisibility(ESlateVisibility::Collapsed);
+        }
+    }
+
     if (EndGameTextBlock)
     {
         EndGameTextBlock->SetText(FText::FromString(EndMessage));
@@ -137,4 +163,11 @@ void UMyUI::OnQuitButtonClicked()
     {
         UKismetSystemLibrary::QuitGame(this, PC, EQuitPreference::Quit, false);
     }
+}
+
+void UMyUI::OnPlayAgainButtonClicked()
+{
+    // Ricarica il livello corrente: ricrea griglia, unita' e stato, riavviando la partita.
+    const FName CurrentLevel(*UGameplayStatics::GetCurrentLevelName(this, true));
+    UGameplayStatics::OpenLevel(this, CurrentLevel);
 }

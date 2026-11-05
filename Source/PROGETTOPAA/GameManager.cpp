@@ -246,6 +246,8 @@ void AGameManager::StartPlacementPhase()
     if (UI)
     {
         UI->UpdateTurnText(FString::Printf(TEXT("Turno: %s (Posizionamento)"), *TurnStr));
+        // In posizionamento il pulsante Termina Turno non deve avere effetto.
+        UI->SetEndTurnButtonEnabled(false);
     }
 }
 
@@ -316,6 +318,8 @@ void AGameManager::StartTurnPhase()
     {
         FString TurnText = bIsPlayerTurn ? TEXT("Turno: Player") : TEXT("Turno: Opponent");
         UI->UpdateTurnText(TurnText);
+        // Il pulsante Termina Turno e' attivo solo nel turno di gioco del player.
+        UI->SetEndTurnButtonEnabled(bIsPlayerTurn);
     }
 
     // All'inizio del turno del giocatore rimuove l'evidenziazione (rossa) del range dell'AI
@@ -340,6 +344,13 @@ void AGameManager::StartTurnPhase()
             Unit->bHasMoved = false;
             Unit->bHasAttacked = false;
         }
+    }
+
+    // Se il turno appena iniziato e' dell'AI, avvialo automaticamente. Copre sia i turni
+    // successivi sia il primo turno dopo il posizionamento quando il player perde il coin toss.
+    if (CurrentPhase == EGamePhase::ETurn && !bIsPlayerTurn)
+    {
+        bAiTurnPending = true;
     }
 }
 
@@ -395,29 +406,55 @@ void AGameManager::CheckGameOver()
         break;
     }
 
+    FString Result;
     if (!bPlayerAlive && !bOpponentAlive)
     {
-        CurrentPhase = EGamePhase::EEnd;
-        if (UI)
-        {
-            UI->ShowEndGameScreen("DRAW");
-        }
+        Result = TEXT("DRAW");
     }
     else if (!bPlayerAlive)
     {
-        CurrentPhase = EGamePhase::EEnd;
-        if (UI)
-        {
-            UI->ShowEndGameScreen("GAME OVER");
-        }
+        Result = TEXT("GAME OVER");
     }
     else if (!bOpponentAlive)
     {
-        CurrentPhase = EGamePhase::EEnd;
-        if (UI)
+        Result = TEXT("WIN");
+    }
+    else
+    {
+        return; // Partita ancora in corso.
+    }
+
+    CurrentPhase = EGamePhase::EEnd;
+
+    // Nasconde la scena di gioco (griglia, ostacoli, evidenziazioni e tutte le unita'),
+    // MANTENENDO visibile lo sfondo di gioco (BackgroundMesh), cosi' a fine partita
+    // restano lo sfondo e il pannello di fine con esito e pulsanti.
+    if (GridManager)
+    {
+        if (GridManager->FloorMeshInstances)     GridManager->FloorMeshInstances->SetHiddenInGame(true);
+        if (GridManager->ObstacleMeshInstances1) GridManager->ObstacleMeshInstances1->SetHiddenInGame(true);
+        if (GridManager->ObstacleMeshInstances2) GridManager->ObstacleMeshInstances2->SetHiddenInGame(true);
+        if (GridManager->ObstacleMeshInstances3) GridManager->ObstacleMeshInstances3->SetHiddenInGame(true);
+        if (GridManager->HighlightMeshInstances) GridManager->HighlightMeshInstances->SetHiddenInGame(true);
+    }
+    for (ABaseUnit* Unit : PlayerUnits)
+    {
+        if (IsValid(Unit))
         {
-            UI->ShowEndGameScreen("WIN");
+            Unit->SetActorHiddenInGame(true);
         }
+    }
+    for (ABaseUnit* Unit : OpponentUnits)
+    {
+        if (IsValid(Unit))
+        {
+            Unit->SetActorHiddenInGame(true);
+        }
+    }
+
+    if (UI)
+    {
+        UI->ShowEndGameScreen(Result);
     }
 }
 

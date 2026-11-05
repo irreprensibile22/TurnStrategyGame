@@ -28,8 +28,16 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UI")
     void ShowEndGameScreen(const FString& EndMessage);
 
+    // Abilita/disabilita il pulsante Termina Turno (disattivo in posizionamento e nel turno AI).
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void SetEndTurnButtonEnabled(bool bEnabled);
+
     UFUNCTION()
     void OnQuitButtonClicked();
+
+    // Riavvia la partita ricaricando il livello corrente (pulsante del pannello di fine partita).
+    UFUNCTION()
+    void OnPlayAgainButtonClicked();
 
 protected:
     virtual void NativeConstruct() override;
@@ -39,6 +47,11 @@ protected:
 
     UPROPERTY(EditAnywhere, meta = (BindWidget))
     UButton* EndTurnButton;
+
+    // Eventuale label testuale del pulsante Termina Turno, se nel widget e' un elemento
+    // separato dal pulsante. Opzionale: se non esiste, il binding non va in errore.
+    UPROPERTY(meta = (BindWidgetOptional))
+    UTextBlock* EndTurnButtonTextBlock;
 
     UPROPERTY(meta = (BindWidget))
     UTextBlock* HealthStatusPedina1;
@@ -63,6 +76,10 @@ protected:
 
     UPROPERTY(EditAnywhere, meta = (BindWidget))
     class UButton* QuitButton;
+
+    // Opzionale: finche' il pulsante non esiste nel widget, il binding non va in errore.
+    UPROPERTY(EditAnywhere, meta = (BindWidgetOptional))
+    class UButton* PlayAgainButton;
 
     UFUNCTION()
     void OnEndTurnButtonClicked();
